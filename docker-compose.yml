@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  bot:
+    build: .
+    container_name: discord-bot
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID}
+      - MONGODB_URI_PROD=mongodb://mongodb:27017/discord_bot
+      - LAVALINK_HOST=lavalink
+      - REDIS_HOST=redis
+      - WEB_PORT=3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongodb
+      - lavalink
+      - redis
+    volumes:
+      - ./logs:/app/logs
+      - ./config:/app/config
+    networks:
+      - bot-network
+
+  mongodb:
+    image: mongo:7
+    container_name: mongodb
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
+      - MONGO_INITDB_DATABASE=discord_bot
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - bot-network
+
+  lavalink:
+    image: ghcr.io/lavalink-devs/lavalink:latest
+    container_name: lavalink
+    restart: unless-stopped
+    environment:
+      - SERVER_PORT=2333
+      - LAVALINK_SERVER_PASSWORD=youshallnotpass
+      - JAVA_OPTS=-Xmx1G
+    ports:
+      - "2333:2333"
+    volumes:
+      - ./lavalink/application.yml:/lavalink/application.yml
+    networks:
+      - bot-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - bot-network
+
+volumes:
+  mongodb-data:
+  redis-data:
+
+networks:
+  bot-network:
+    driver: bridge
